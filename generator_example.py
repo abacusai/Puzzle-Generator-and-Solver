@@ -7,16 +7,16 @@ from typing import Literal, List, Set, Tuple, Callable
 def format_table(header: List[str], table: List[List[str]],
                  top_format='{:^{}}', left_format=' {:<{}}', cell_format='{:<{}}',
                  col_delim=' | ', row_delim='\n', prefix_format='|', postfix_format='|'):
-    table = [[''] + header + ['']] + [row for row in table]
+    table = [[''] + header + ['']] + table
     table_format = [[prefix_format + left_format] + len(header) * [top_format]] \
-                    + len(table) * [[prefix_format + left_format] + len(header) * [cell_format]]
-    col_widths = [max(len(format.format(cell, 0))
-                      for format, cell in zip(col_format, col))
+        + len(table) * [[prefix_format + left_format] + len(header) * [cell_format]]
+    col_widths = [max(len(col_format.format(cell, 0))
+                      for col_format, cell in zip(col_format, col))
                   for col_format, col in zip(zip(*table_format), zip(*table))]
     return row_delim.join(
                col_delim.join(
-                   format.format(cell, width)
-                   for format, cell, width in zip(row_format, row, col_widths)) + f" {postfix_format}"
+                   cell_format.format(cell, width)
+                   for cell_format, cell, width in zip(row_format, row, col_widths)) + f' {postfix_format}'
                for row_format, row in zip(table_format, table))
 
 
@@ -24,10 +24,10 @@ def update_range(wns: List[str], rns: List[List[Set[str]]], cmp: Callable):
     changed = False
     for rn in rns:
         classified_words = set()
-        for n_col, set_of_words in enumerate(rn):
+        for set_of_words in rn:
             if len(set_of_words) == 1:
                 classified_words.add(next(iter(set_of_words)))
-        word_to_cols = dict()
+        word_to_cols = {}
         for n_col, set_of_words in enumerate(rn):
             if len(set_of_words) != 1:
                 prev_length = len(set_of_words)
@@ -70,7 +70,7 @@ def update_range(wns: List[str], rns: List[List[Set[str]]], cmp: Callable):
     return changed
 
 
-def update_ranges(relations: List[Tuple[List[int], List[str], Callable, ...]],
+def update_ranges(relations: List[Tuple[List[int], List[str], Callable]],
                   ranges: List[List[Set[str]]]):
     changed = False
     for ins, wns, callable_object, *_ in relations:
@@ -206,10 +206,10 @@ def generate_puzzle(table: List[List[str]], *,
     min_relations = None
     while True:
         ranges = [[set(table_wo_left[i]) for _ in range(len(table_wo_left[i]))] for i in range(len(table_wo_left))]
-        relations = list()
+        relations = []
         fail = False
         while not fail:
-            needs_clarification = list()
+            needs_clarification = []
             no_solutions = False
             solved = True
             for i, rng in enumerate(ranges):
@@ -389,77 +389,77 @@ def generate_puzzle(table: List[List[str]], *,
 
 def main():
     kinds_dict = {
-        "Nationality": {
-            "american", "argentine", "australian", "brazilian", "british",
-            "canadian", "chinese", "colombian", "dutch", "egyptian",
-            "french", "german", "indian", "indonesian", "italian",
-            "japanese", "malaysian", "mexican", "nigerian", "pakistani",
-            "polish", "russian", "spanish", "thai", "turkish",
+        'Nationality': {
+            'american', 'argentine', 'australian', 'brazilian', 'british',
+            'canadian', 'chinese', 'colombian', 'dutch', 'egyptian',
+            'french', 'german', 'indian', 'indonesian', 'italian',
+            'japanese', 'malaysian', 'mexican', 'nigerian', 'pakistani',
+            'polish', 'russian', 'spanish', 'thai', 'turkish',
         },
-        "Food": {
-            "apple", "apricot", "artichoke", "asparagus", "avocado",
-            "banana", "blueberry", "broccoli", "cabbage", "carrot",
-            "cauliflower", "cherry", "corn", "cranberry", "cucumber",
-            "eggplant", "garlic", "grapefruit", "grapes", "kale",
-            "kiwi", "lemon", "lettuce", "lime", "mango",
-            "nectarine", "onion", "orange", "papaya", "peach",
-            "pear", "peas", "pepper", "pineapple", "plum",
-            "pomegranate", "potato", "pumpkin", "radish", "raspberry",
-            "spinach", "strawberry", "tomato", "watermelon", "zucchini",
+        'Food': {
+            'apple', 'apricot', 'artichoke', 'asparagus', 'avocado',
+            'banana', 'blueberry', 'broccoli', 'cabbage', 'carrot',
+            'cauliflower', 'cherry', 'corn', 'cranberry', 'cucumber',
+            'eggplant', 'garlic', 'grapefruit', 'grapes', 'kale',
+            'kiwi', 'lemon', 'lettuce', 'lime', 'mango',
+            'nectarine', 'onion', 'orange', 'papaya', 'peach',
+            'pear', 'peas', 'pepper', 'pineapple', 'plum',
+            'pomegranate', 'potato', 'pumpkin', 'radish', 'raspberry',
+            'spinach', 'strawberry', 'tomato', 'watermelon', 'zucchini',
         },
-        "Pet": {
-            "bird", "cat", "chinchilla", "dog", "ferret",
-            "fish", "frog", "goat", "goldfish", "guinea-pig",
-            "hamster", "hedgehog", "horse", "lizard", "mouse",
-            "pony", "rabbit", "rat", "snake", "turtle",
+        'Pet': {
+            'bird', 'cat', 'chinchilla', 'dog', 'ferret',
+            'fish', 'frog', 'goat', 'goldfish', 'guinea-pig',
+            'hamster', 'hedgehog', 'horse', 'lizard', 'mouse',
+            'pony', 'rabbit', 'rat', 'snake', 'turtle',
         },
-        "Job": {
-            "accountant", "analyst", "architect", "bartender", "chef",
-            "coach", "dancer", "designer", "doctor", "dressmaker",
-            "electrician", "engineer", "entrepreneur", "firefighter", "fisherman",
-            "freelancer", "journalist", "lawyer", "librarian", "manager",
-            "mechanic", "musician", "nurse", "paramedic", "photographer",
-            "pilot", "police-officer", "project-manager", "scientist", "security-guard",
-            "social-worker", "software-developer", "teacher", "videographer", "writer",
+        'Job': {
+            'accountant', 'analyst', 'architect', 'bartender', 'chef',
+            'coach', 'dancer', 'designer', 'doctor', 'dressmaker',
+            'electrician', 'engineer', 'entrepreneur', 'firefighter', 'fisherman',
+            'freelancer', 'journalist', 'lawyer', 'librarian', 'manager',
+            'mechanic', 'musician', 'nurse', 'paramedic', 'photographer',
+            'pilot', 'police-officer', 'project-manager', 'scientist', 'security-guard',
+            'social-worker', 'software-developer', 'teacher', 'videographer', 'writer',
         },
-        "Beverage": {
-            "7up", "almond-milk", "coffee", "cola", "fanta",
-            "hot-chocolate", "iced-tea", "juice", "lemonade", "milk",
-            "mirinda", "soy-milk", "sprite", "tea", "water",
+        'Beverage': {
+            '7up', 'almond-milk', 'coffee', 'cola', 'fanta',
+            'hot-chocolate', 'iced-tea', 'juice', 'lemonade', 'milk',
+            'mirinda', 'soy-milk', 'sprite', 'tea', 'water',
         },
-        "Transport": {
-            "airplane", "bike", "boat", "bus", "car",
-            "helicopter", "jet-ski", "motorbike", "quad-bike", "roller",
-            "scooter", "ship", "skateboard", "snowmobile",
-            "subway", "taxi", "train", "tram", "trike", "van",
+        'Transport': {
+            'airplane', 'bike', 'boat', 'bus', 'car',
+            'helicopter', 'jet-ski', 'motorbike', 'quad-bike', 'roller',
+            'scooter', 'ship', 'skateboard', 'snowmobile',
+            'subway', 'taxi', 'train', 'tram', 'trike', 'van',
         },
-        "Music-Genre": {
-            "ambient", "blues", "classical", "country", "d&b",
-            "disco", "dubstep", "electronic", "folk", "funk",
-            "gospel", "hip-hop", "house", "indie", "jazz",
-            "metal", "pop", "punk", "r&b", "reggae",
-            "rock", "salsa", "soul", "techno", "trance",
+        'Music-Genre': {
+            'ambient', 'blues', 'classical', 'country', 'd&b',
+            'disco', 'dubstep', 'electronic', 'folk', 'funk',
+            'gospel', 'hip-hop', 'house', 'indie', 'jazz',
+            'metal', 'pop', 'punk', 'r&b', 'reggae',
+            'rock', 'salsa', 'soul', 'techno', 'trance',
         },
-        "Movie-Genre": {
-            "action", "adventure", "animation", "comedy", "crime",
-            "disaster", "documentary", "drama", "epic", "family",
-            "fantasy", "horror", "martial-arts", "musical", "mystery",
-            "romance", "satire", "scientific", "sports", "spy",
-            "superhero", "thriller", "time-travel", "western", "zombie",
+        'Movie-Genre': {
+            'action', 'adventure', 'animation', 'comedy', 'crime',
+            'disaster', 'documentary', 'drama', 'epic', 'family',
+            'fantasy', 'horror', 'martial-arts', 'musical', 'mystery',
+            'romance', 'satire', 'scientific', 'sports', 'spy',
+            'superhero', 'thriller', 'time-travel', 'western', 'zombie',
         },
-        "Sport": {
-            "badminton", "baseball", "basketball", "biathlon", "climbing",
-            "cricket", "cycling", "golf", "handball", "ice-hockey",
-            "lacrosse", "parkour", "rowing", "rugby", "sailing",
-            "skateboarding", "skiing", "snowboarding", "soccer", "surfing",
-            "swimming", "tennis", "volleyball", "water-polo", "weightlifting",
+        'Sport': {
+            'badminton', 'baseball', 'basketball', 'biathlon', 'climbing',
+            'cricket', 'cycling', 'golf', 'handball', 'ice-hockey',
+            'lacrosse', 'parkour', 'rowing', 'rugby', 'sailing',
+            'skateboarding', 'skiing', 'snowboarding', 'soccer', 'surfing',
+            'swimming', 'tennis', 'volleyball', 'water-polo', 'weightlifting',
         },
-        "Hobby": {
-            "baking", "board-games", "camping", "card-games", "chess",
-            "collecting", "cooking", "dancing", "drawing", "filmmaking",
-            "fishing", "gardening", "hiking", "magic-tricks", "photography",
-            "puzzles", "reading", "rock-climbing", "singing", "skydiving",
-            "sudoku", "traveling", "video-games", "woodworking", "writing",
+        'Hobby': {
+            'baking', 'board-games', 'camping', 'card-games', 'chess',
+            'collecting', 'cooking', 'dancing', 'drawing', 'filmmaking',
+            'fishing', 'gardening', 'hiking', 'magic-tricks', 'photography',
+            'puzzles', 'reading', 'rock-climbing', 'singing', 'skydiving',
+            'sudoku', 'traveling', 'video-games', 'woodworking', 'writing',
         }
     }
     kinds = sorted(kinds_dict)
@@ -467,9 +467,9 @@ def main():
     m_objects = 4
 
     # Check
-    assert n_attributes <= len(kinds_dict),\
+    assert n_attributes <= len(kinds_dict), \
         f'Not enough attributes: actual {len(kinds_dict)}, expected {n_attributes}'
-    assert all(m_objects <= len(v) for k, v in kinds_dict.items()), 'Not enough objects: ' +\
+    assert all(m_objects <= len(v) for k, v in kinds_dict.items()), 'Not enough objects: ' + \
         f'actual {next(f"{k}={len(v)}" for k, v in kinds_dict.items() if m_objects > len(v))}, expected {m_objects}'
 
     chosen_kinds = sorted(random.sample(kinds, k=n_attributes))
@@ -478,18 +478,18 @@ def main():
 
     print('.:: Puzzle ::.')
     for row in table:
-        print(f"{row[0]}:", ', '.join(sorted(row[1:])))
+        print(f'{row[0]}:', ', '.join(sorted(row[1:])))
     t1 = time.monotonic()
     premises = generate_puzzle(table, level=20, minimal_conditions=True, max_seconds_for_minimizing=30)
     t2 = time.monotonic()
     indent = len(str(len(premises)))
     for i, premise in enumerate(premises, 1):
         i = str(i).rjust(indent)
-        print(f"{i}. {premise}")
+        print(f'{i}. {premise}')
     print('\n.:: Answer ::.')
     print(format_table(header, table))
-    print(f"Time: {t2 - t1:.6f} seconds")
+    print(f'Time: {t2 - t1:.6f} seconds')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

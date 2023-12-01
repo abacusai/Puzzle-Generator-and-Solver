@@ -5,7 +5,7 @@ from typing import Union, Tuple, List, Set, Callable
 
 def format_table(table: List[List[str]]) -> str:
     col_width = [max(len(x) for x in col) for col in zip(*table)]
-    return '\n'.join("| " + " | ".join("{:{}}".format(x, col_width[i]) for i, x in enumerate(line)) + " |"
+    return '\n'.join('| ' + ' | '.join('{:{}}'.format(x, col_width[i]) for i, x in enumerate(line)) + ' |'
                      for line in table)
 
 
@@ -13,10 +13,10 @@ def update_range(wns: List[str], rns: List[List[Set[str]]], cmp: Callable):
     changed = False
     for rn in rns:
         classified_words = set()
-        for n_col, set_of_words in enumerate(rn):
+        for set_of_words in rn:
             if len(set_of_words) == 1:
                 classified_words.add(next(iter(set_of_words)))
-        word_to_cols = dict()
+        word_to_cols = {}
         for n_col, set_of_words in enumerate(rn):
             if len(set_of_words) != 1:
                 prev_length = len(set_of_words)
@@ -54,12 +54,14 @@ def update_range(wns: List[str], rns: List[List[Set[str]]], cmp: Callable):
     changed |= any(rn != new_rn for rn, new_rn in zip(rns, new_rns))
     if changed:
         for rn, new_rn in zip(rns, new_rns):
+            if rn != new_rn:
+                print(f'{str(rn)} -> {str(new_rn)}')
             for old, new in zip(rn, new_rn):
                 old.intersection_update(new)
     return changed
 
 
-def update_ranges(relations: List[Tuple[List[int], List[str], Callable, ...]],
+def update_ranges(relations: List[Tuple[List[int], List[str], Callable]],
                   ranges: List[List[Set[str]]]):
     changed = False
     for ins, wns, callable_object, *_ in relations:
@@ -69,7 +71,7 @@ def update_ranges(relations: List[Tuple[List[int], List[str], Callable, ...]],
 
 def solve_puzzle(table: List[List[str]],
                  relations: List[Union[Tuple[List[int], List[str], Union[Callable, Set[Callable], List[Callable]]],
-                                       Tuple[List[int], List[str], Union[Callable, Set[Callable], List[Callable]], ...]]],
+                                       Tuple[List[int], List[str], Union[Callable, Set[Callable], List[Callable]]]]],
                  *,
                  allow_complex=True,
                  max_solutions: Union[bool, None] = None) -> Tuple[bool, List[List[List[set]]], bool]:
@@ -77,7 +79,7 @@ def solve_puzzle(table: List[List[str]],
     if max_solutions is not None and max_solutions <= 0:
         return False, [], False
 
-    new_relations = list()
+    new_relations = []
     for ins, wns, callable_object, *other in relations:
         if callable(callable_object):
             callable_object = {callable_object}
@@ -200,7 +202,7 @@ def solve_einstein_riddle():
         ({'live', 'keep', 'drink', 'smoke'}, lambda c1, c2: c1 == c2),
     ]
 
-    relations = list()
+    relations = []
     for line in task.splitlines(keepends=False):
         founded_objects = []
         for n_group, group in enumerate(classified_objects):
@@ -238,7 +240,7 @@ def solve_einstein_riddle():
 
 
 def solve_zebra_puzzle():
-    print("Zebra Puzzle")
+    print('Zebra Puzzle')
     task = ' ' * 4 + """
     1. There are five houses.
     2. The Englishman lives in the red house.
@@ -275,7 +277,7 @@ def solve_zebra_puzzle():
         ({'live', 'own', 'drink', 'drunk', 'smoke'}, lambda c1, c2: c1 == c2),
     ]
 
-    relations = list()
+    relations = []
     for line in task.splitlines(keepends=False):
         founded_objects = []
         for n_group, group in enumerate(classified_objects):
@@ -313,7 +315,7 @@ def solve_zebra_puzzle():
 
 
 def solve_blood_donation_puzzle():
-    print("Blood Donation Puzzle")
+    print('Blood Donation Puzzle')
     task = ' ' * 4 + """
         1. The A+ donor is next to the B+ donor.
         2. Brooke is at one of the ends.
@@ -331,7 +333,8 @@ def solve_blood_donation_puzzle():
         14. The youngest woman is next to the 30-year-old woman.
         15. The woman considered AB+ universal recipient is exactly to the left of the A+ donor.
         16. Meghan is somewhere to the right of the woman wearing the purple shirt.
-        17. The woman wearing the green shirt is somewhere between the Actress and the woman wearing the red shirt, in that order.
+        17. The woman wearing the green shirt is somewhere between the Actress and the woman wearing the red shirt, \
+in that order.
         18. At one of the ends is the 130 lb woman.
         19. The O- universal donor is 35 years old.
         20. The Florist is somewhere between the Actress and the Engineer, in that order.
@@ -362,7 +365,7 @@ def solve_blood_donation_puzzle():
         ({'is', 'weighs'}, lambda c1, c2: c1 == c2),
     ]
 
-    relations = list()
+    relations = []
     for line in task.splitlines(keepends=False):
         founded_objects = []
         for n_group, group in enumerate(classified_objects):
@@ -399,7 +402,7 @@ def solve_blood_donation_puzzle():
             print(solution)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     print('=' * 42)
     solve_einstein_riddle()
     print('=' * 42)
