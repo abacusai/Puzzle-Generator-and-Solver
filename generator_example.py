@@ -1,7 +1,12 @@
+from argparse import ArgumentParser
+import json
 import random
 import collections
 import time
-from typing import Literal, List, Set, Tuple, Callable
+from multiprocessing import Pool
+from os import cpu_count
+from typing import Literal, List, Set, Tuple, Callable, Mapping
+from tqdm import tqdm
 
 
 def format_table(header: List[str], table: List[List[str]],
@@ -387,7 +392,23 @@ def generate_puzzle(table: List[List[str]], *,
     return premises
 
 
-def main():
+def rewrite_premise(phrases: Mapping[str, Tuple[str, str]], premise: str):
+    for kind, (pre, post, neg) in phrases.items():
+        premise = premise.replace(f'== {kind}:', f'{post} ')
+        premise = premise.replace(f'!= {kind}:', f'{neg} ')
+        premise = premise.replace(f'{kind}:', f'the person {pre} {post} ')
+    return premise
+
+
+def parse_range(range_str: str):
+    rmin, rmax = (int(x) for x in range_str.split(':'))
+    return (rmin, rmax)
+
+
+def create_puzzle(args: Tuple[int, Tuple[int, int], Tuple[int, int]]):
+    seed, attr_rng, object_rng = args
+    random.seed(seed)
+
     kinds_dict = {
         'Nationality': {
             'american', 'argentine', 'australian', 'brazilian', 'british',
@@ -429,7 +450,7 @@ def main():
         },
         'Transport': {
             'airplane', 'bike', 'boat', 'bus', 'car',
-            'helicopter', 'jet-ski', 'motorbike', 'quad-bike', 'roller',
+            'helicopter', 'jet-ski', 'motorbike', 'quad-bike',
             'scooter', 'ship', 'skateboard', 'snowmobile',
             'subway', 'taxi', 'train', 'tram', 'trike', 'van',
         },
@@ -440,13 +461,14 @@ def main():
             'metal', 'pop', 'punk', 'r&b', 'reggae',
             'rock', 'salsa', 'soul', 'techno', 'trance',
         },
-        'Movie-Genre': {
-            'action', 'adventure', 'animation', 'comedy', 'crime',
-            'disaster', 'documentary', 'drama', 'epic', 'family',
-            'fantasy', 'horror', 'martial-arts', 'musical', 'mystery',
-            'romance', 'satire', 'scientific', 'sports', 'spy',
-            'superhero', 'thriller', 'time-travel', 'western', 'zombie',
-        },
+        'Movie-Genre': {k + ' movies' for k in [
+                'action', 'adventure', 'animation', 'comedy', 'crime',
+                'disaster', 'documentary', 'drama', 'epic', 'family',
+                'fantasy', 'horror', 'martial-arts', 'musical', 'mystery',
+                'romance', 'satire', 'scientific', 'sports', 'spy',
+                'superhero', 'thriller', 'time-travel', 'western', 'zombie',
+            ]
+        },  
         'Sport': {
             'badminton', 'baseball', 'basketball', 'biathlon', 'climbing',
             'cricket', 'cycling', 'golf', 'handball', 'ice-hockey',
@@ -462,33 +484,65 @@ def main():
             'sudoku', 'traveling', 'video-games', 'woodworking', 'writing',
         }
     }
+    phrases_dict = {
+        'Nationality': ('who', 'is', 'is not'),
+        'Food': ('that', 'likes', "doesn't eat"),
+        'Pet': ('that', 'has a', 'does not own a'),
+        'Job': ('who', 'is a', 'is not a'),
+        'Beverage': ('who', 'drinks', 'dislikes'),
+        'Transport': ('that', 'travels by', 'avoids getting on a'),
+        'Music-Genre': ('who', 'listens to', 'cannot stand'),
+        'Movie-Genre': ('that', 'watches', 'hates'),
+        'Sport': ('that', 'plays', 'cannot play'),
+        'Hobby': ('who', 'likes', 'will not even try'),
+    }
+
     kinds = sorted(kinds_dict)
-    n_attributes = 4
-    m_objects = 4
+    n_attributes = random.choice(attr_rng)
+    m_objects = random.choice(object_rng)
 
     # Check
     assert n_attributes <= len(kinds_dict), \
         f'Not enough attributes: actual {len(kinds_dict)}, expected {n_attributes}'
-    assert all(m_objects <= len(v) for k, v in kinds_dict.items()), 'Not enough objects: ' + \
-        f'actual {next(f"{k}={len(v)}" for k, v in kinds_dict.items() if m_objects > len(v))}, expected {m_objects}'
+    assert all(m_objects <= len(v) for k, v in kinds_dict.items()), 'Not enough objects: actual ' + \
+        str(next(f'{k}={len(v)}' for k, v in kinds_dict.items() if m_objects > len(v))) + \
+        f'expected {m_objects}'
 
-    chosen_kinds = sorted(random.sample(kinds, k=n_attributes))
+    chosen_kinds = random.sample(kinds, k=n_attributes)
     table = [[kind] + random.sample(sorted(kinds_dict[kind]), k=m_objects) for kind in chosen_kinds]
-    header = [str(i) for i in range(1, len(table[0]))]
 
-    print('.:: Puzzle ::.')
-    for row in table:
-        print(f'{row[0]}:', ', '.join(sorted(row[1:])))
-    t1 = time.monotonic()
     premises = generate_puzzle(table, level=20, minimal_conditions=True, max_seconds_for_minimizing=30)
-    t2 = time.monotonic()
-    indent = len(str(len(premises)))
-    for i, premise in enumerate(premises, 1):
-        i = str(i).rjust(indent)
-        print(f'{i}. {premise}')
-    print('\n.:: Answer ::.')
-    print(format_table(header, table))
-    print(f'Time: {t2 - t1:.6f} seconds')
+    phrases = {k: phrases_dict[k] for k in chosen_kinds}
+    return {
+        'attributes': chosen_kinds,
+        'n_objects': m_objects,
+        'premises': [rewrite_premise(phrases, p) for p in premises],
+        'answer': {
+            row[0]: row[1:]
+            for row in table
+        }
+    }
+
+
+def main():
+    parser = ArgumentParser(description='Script to generate zebra problems.')
+    parser.add_argument('--output', required=True, help='File to write generated problems.')
+    parser.add_argument('--num', default=1000, type=int, help='Number of problems to generate.')
+    parser.add_argument('--nattrs', default=(3, 5), type=parse_range, help='Range of attributes')
+    parser.add_argument('--nobjects', default=(3, 5), type=parse_range, help='Range of objects')
+    parser.add_argument('--seed', default=0x5eed, type=int, help='Seed for random generation.')
+    args = parser.parse_args()
+
+    attr_rng = list(range(args.nattrs[0], args.nattrs[1] + 1))
+    object_rng = list(range(args.nobjects[0], args.nobjects[1] + 1))
+
+    with open(args.output, 'w') as output_file, Pool(cpu_count() - 1) as pool:
+        for output in tqdm(pool.imap(create_puzzle, (
+                    (args.seed + 97 * i, attr_rng, object_rng)
+                    for i in range(args.num)
+                ), chunksize=1), total=args.num):
+            json.dump(output, output_file)
+            output_file.write('\n')
 
 
 if __name__ == '__main__':
